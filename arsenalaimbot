@@ -17,28 +17,33 @@ local AimbotTab = Window:MakeTab({
     PremiumOnly = false
 })
 
+-- Variables
+local aimbotEnabled = false
+local smoothing = 1
+local aimbotKey = Enum.KeyCode.E
+local teamCheckEnabled = true
+local aimPart = "Head"
+
 -- Aimbot Toggle
-local aimbotToggle = AimbotTab:AddToggle({
+AimbotTab:AddToggle({
     Name = "Enable Aimbot",
     Default = false,
     Callback = function(value)
-        -- Code to enable/disable aimbot
-        print("Aimbot Enabled:", value)
+        aimbotEnabled = value
     end
 })
 
 -- Smoothing Slider
 AimbotTab:AddSlider({
     Name = "Aimbot Smoothing",
-    Min = 0,
-    Max = 100,
-    Default = 10,
+    Min = 1,
+    Max = 5,
+    Default = 1,
     Color = Color3.fromRGB(255, 0, 0),
     Increment = 1,
     ValueName = "Smoothness",
     Callback = function(value)
-        -- Code to set aimbot smoothing
-        print("Aimbot Smoothing:", value)
+        smoothing = value
     end
 })
 
@@ -47,57 +52,187 @@ AimbotTab:AddBind({
     Name = "Aimbot Key",
     Default = Enum.KeyCode.E,
     Hold = false,
-    Callback = function()
-        -- Code to handle aimbot activation with key
-        print("Aimbot Key Pressed")
+    Callback = function(value)
+        aimbotKey = value
     end
 })
 
 -- Team Check Toggle
-local teamCheckToggle = AimbotTab:AddToggle({
+AimbotTab:AddToggle({
     Name = "Team Check",
     Default = true,
     Callback = function(value)
-        -- Code to enable/disable team check
-        print("Team Check Enabled:", value)
+        teamCheckEnabled = value
     end
 })
 
--- Visual Boxes Toggle
-local visualBoxesToggle = AimbotTab:AddToggle({
-    Name = "Visual Boxes",
+-- Aim Part Dropdown
+AimbotTab:AddDropdown({
+    Name = "Aim Part",
+    Default = "Head",
+    Options = {"Head", "Torso", "Left Leg", "Right Leg", "Left Arm", "Right Arm"},
+    Callback = function(value)
+        aimPart = value
+    end
+})
+
+-- Create the Visuals Tab
+local VisualsTab = Window:MakeTab({
+    Name = "Visuals",
+    Icon = "rbxassetid://6034818017",
+    PremiumOnly = false
+})
+
+-- Variables
+local fovEnabled = false
+local fovRadius = 90
+local visualBoxesEnabled = false
+
+-- Visualize FOV Toggle
+VisualsTab:AddToggle({
+    Name = "Visualize FOV",
     Default = false,
     Callback = function(value)
-        -- Code to enable/disable visual boxes
-        print("Visual Boxes Enabled:", value)
+        fovEnabled = value
     end
 })
 
--- Visual FOV Slider
-AimbotTab:AddSlider({
+-- FOV Slider
+VisualsTab:AddSlider({
     Name = "FOV Radius",
-    Min = 0,
-    Max = 360,
+    Min = 1,
+    Max = 100,
     Default = 90,
     Color = Color3.fromRGB(0, 255, 0),
     Increment = 1,
     ValueName = "Radius",
     Callback = function(value)
-        -- Code to set FOV radius
-        print("FOV Radius:", value)
+        fovRadius = value
     end
 })
 
--- Aim Part Dropdown
-local aimPartDropdown = AimbotTab:AddDropdown({
-    Name = "Aim Part",
-    Default = "Head",
-    Options = {"Head", "Torso", "Left Leg", "Right Leg", "Left Arm", "Right Arm"},
+-- Visual Box Toggle
+VisualsTab:AddToggle({
+    Name = "Visual Boxes",
+    Default = false,
     Callback = function(value)
-        -- Code to set aim part
-        print("Aim Part Selected:", value)
+        visualBoxesEnabled = value
     end
 })
 
 -- Initialize the Orion UI Library
+OrionLib:Init()
+
+-- Aimbot and Visuals Functionality
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- Function to get the FOV Circle
+local function getFOVCircle()
+    local screenSize = Camera.ViewportSize
+    local center = screenSize / 2
+    local radius = fovRadius
+    return center, radius
+end
+
+-- Function to get the closest player
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local closestDistance = math.huge
+    local center, radius = getFOVCircle()
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local character = player.Character
+            local part = character:FindFirstChild(aimPart)
+            if part then
+                local screenPoint, onScreen = Camera:WorldToScreenPoint(part.Position)
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - center).Magnitude
+                
+                if distance < radius and (teamCheckEnabled == false or player.Team ~= LocalPlayer.Team) then
+                    if distance < closestDistance then
+                        closestPlayer = player
+                        closestDistance = distance
+                    end
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+-- Function to perform aimbot
+local function aimbot()
+    if aimbotEnabled then
+        local closestPlayer = getClosestPlayer()
+        if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local part = closestPlayer.Character:FindFirstChild(aimPart)
+            if part then
+                local targetPos = Camera:WorldToViewportPoint(part.Position)
+                local mouse = game.Players.LocalPlayer:GetMouse()
+                local mousePos = Vector2.new(mouse.X, mouse.Y)
+                local smoothFactor = smoothing / 10
+                local newMousePos = mousePos:Lerp(Vector2.new(targetPos.X, targetPos.Y), smoothFactor)
+                mousemoveabs(newMousePos.X, newMousePos.Y)
+            end
+        end
+    end
+end
+
+-- Function to draw FOV
+local function drawFOV()
+    if fovEnabled then
+        local center, radius = getFOVCircle()
+        local fovCircle = Drawing.new("Circle")
+        fovCircle.Radius = radius
+        fovCircle.Position = center
+        fovCircle.Color = Color3.fromRGB(0, 255, 0)
+        fovCircle.Thickness = 1
+        fovCircle.Visible = true
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if fovEnabled then
+                fovCircle.Visible = true
+            else
+                fovCircle.Visible = false
+            end
+        end)
+    end
+end
+
+-- Function to draw visual boxes
+local function drawVisualBoxes()
+    if visualBoxesEnabled then
+        game:GetService("RunService").RenderStepped:Connect(function()
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local character = player.Character
+                    local part = character:FindFirstChild(aimPart)
+                    if part then
+                        local screenPoint, onScreen = Camera:WorldToScreenPoint(part.Position)
+                        if onScreen then
+                            local boxSize = 50
+                            local box = Drawing.new("Square")
+                            box.Size = Vector2.new(boxSize, boxSize)
+                            box.Position = Vector2.new(screenPoint.X - boxSize / 2, screenPoint.Y - boxSize / 2)
+                            box.Color = Color3.fromRGB(255, 0, 0)
+                            box.Thickness = 1
+                            box.Visible = true
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- Connect the aimbot function to the RenderStepped event
+RunService.RenderStepped:Connect(function()
+    aimbot()
+    drawFOV()
+    drawVisualBoxes()
+end)
+
+-- Ensure initialization
 OrionLib:Init()
