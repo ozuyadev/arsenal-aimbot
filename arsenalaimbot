@@ -1,0 +1,103 @@
+-- Load the Orion UI Library
+local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostDuckyy/UI-Libraries/main/Orion/source.lua'))()
+local Window = OrionLib:MakeWindow({
+    Name = "Arsenal Aimbot",
+    HidePremium = false,
+    SaveConfig = true,
+    ConfigFolder = "ArsenalConfig",
+    IntroEnabled = true,
+    IntroText = "Arsenal Aimbot",
+    IntroIcon = "rbxassetid://6034818017"
+})
+
+-- Create the Aimbot Tab
+local AimbotTab = Window:MakeTab({
+    Name = "Aimbot",
+    Icon = "rbxassetid://6034818017",
+    PremiumOnly = false
+})
+
+-- Aimbot Toggle
+local aimbotToggle = AimbotTab:AddToggle({
+    Name = "Enable Aimbot",
+    Default = false,
+    Callback = function(value)
+        -- Code to enable/disable aimbot
+        print("Aimbot Enabled:", value)
+    end
+})
+
+-- Smoothing Slider
+AimbotTab:AddSlider({
+    Name = "Aimbot Smoothing",
+    Min = 0,
+    Max = 100,
+    Default = 10,
+    Color = Color3.fromRGB(255, 0, 0),
+    Increment = 1,
+    ValueName = "Smoothness",
+    Callback = function(value)
+        -- Code to set aimbot smoothing
+        print("Aimbot Smoothing:", value)
+    end
+})
+
+-- Aimbot Keybind
+AimbotTab:AddBind({
+    Name = "Aimbot Key",
+    Default = Enum.KeyCode.E,
+    Hold = false,
+    Callback = function()
+        -- Code to handle aimbot activation with key
+        print("Aimbot Key Pressed")
+    end
+})
+
+-- Team Check Toggle
+local teamCheckToggle = AimbotTab:AddToggle({
+    Name = "Team Check",
+    Default = true,
+    Callback = function(value)
+        -- Code to enable/disable team check
+        print("Team Check Enabled:", value)
+    end
+})
+
+-- Visual Boxes Toggle
+local visualBoxesToggle = AimbotTab:AddToggle({
+    Name = "Visual Boxes",
+    Default = false,
+    Callback = function(value)
+        -- Code to enable/disable visual boxes
+        print("Visual Boxes Enabled:", value)
+    end
+})
+
+-- Visual FOV Slider
+AimbotTab:AddSlider({
+    Name = "FOV Radius",
+    Min = 0,
+    Max = 360,
+    Default = 90,
+    Color = Color3.fromRGB(0, 255, 0),
+    Increment = 1,
+    ValueName = "Radius",
+    Callback = function(value)
+        -- Code to set FOV radius
+        print("FOV Radius:", value)
+    end
+})
+
+-- Aim Part Dropdown
+local aimPartDropdown = AimbotTab:AddDropdown({
+    Name = "Aim Part",
+    Default = "Head",
+    Options = {"Head", "Torso", "Left Leg", "Right Leg", "Left Arm", "Right Arm"},
+    Callback = function(value)
+        -- Code to set aim part
+        print("Aim Part Selected:", value)
+    end
+})
+
+-- Initialize the Orion UI Library
+OrionLib:Init()
